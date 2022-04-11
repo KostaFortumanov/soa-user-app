@@ -1,0 +1,179 @@
+swagger: '2.0'
+info:
+  title: Shop Example API
+  version: "0.1"
+  description: Simple example API
+consumes:
+  - application/json
+produces:
+  - application/json
+basePath: "/api"
+securityDefinitions:
+  jwt:
+    type: apiKey
+    name: Authorization
+    in: header
+    x-authentication-scheme: Bearer
+    x-bearerInfoFunc: app.decode_token
+paths:
+  /auth:
+    post:
+      tags: [ Auth ]
+      operationId: app.auth
+      parameters:
+        - $ref: '#/parameters/auth_body'
+      responses:
+        200:
+          description: Return jwt token
+        401:
+          description: Bad auth
+  /registerCustomer:
+    post:
+      tags: [ Register ]
+      operationId: app.register_customer
+      parameters:
+        - $ref: '#/parameters/register_body'
+      responses:
+        200:
+          description: Return jwt token
+        401:
+          description: Bad auth
+  /registerEmployee:
+    post:
+      tags: [ Register ]
+      operationId: app.register_employee
+      parameters:
+        - $ref: '#/parameters/register_employee_body'
+      responses:
+        200:
+          description: Return jwt token
+        401:
+          description: Bad auth
+  /createRole:
+    post:
+      tags: [ Create role ]
+      operationId: app.create_role
+      parameters:
+        - $ref: '#/parameters/create_role_body'
+      responses:
+        200:
+          description: Create role
+        401:
+          description: Bad request
+  /userContainsRole:
+    post:
+      tags: [ User contains role ]
+      operationId: app.user_contains_role
+      parameters:
+        - $ref: '#/parameters/role_body'
+      responses:
+        200:
+          description: Create role
+        401:
+          description: Bad request
+  /userInfo:
+    get:
+      tags: [ User info ]
+      operationId: app.user_info
+      responses:
+        200:
+          description: User info
+        401:
+          description: Bad request
+  /refreshToken:
+    post:
+      tags: [ Refresh token ]
+      operationId: app.refresh_token
+      parameters:
+        - $ref: '#/parameters/refresh_token_body'
+      responses:
+        200:
+          description: Refresh token
+        401:
+          description: Bad request
+  /logout:
+    post:
+      tags: [ Logout ]
+      operationId: app.logout
+      parameters:
+        - $ref: '#/parameters/refresh_token_body'
+      responses:
+        200:
+          description: Logout
+        401:
+          description: Bad request
+
+parameters:
+  auth_body:
+    name: auth_body
+    description: Login and get token
+    in: body
+    schema:
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+  register_body:
+    name: register_body
+    description: Register adn get token
+    in: body
+    schema:
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+  register_employee_body:
+    name: register_employee_body
+    description: Register and get token
+    in: body
+    schema:
+      required:
+        - username
+        - password
+        - roles
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+        roles:
+          type: array
+  create_role_body:
+    name: create_role_body
+    description: Create role
+    in: body
+    schema:
+      required:
+        - role
+      properties:
+        role:
+          type: string
+  role_body:
+    name: role_body
+    description: Role
+    in: body
+    schema:
+      required:
+        - role
+      properties:
+        role:
+          type: string
+  refresh_token_body:
+    name: refresh_token_body
+    description: Refresh Token
+    in: body
+    schema:
+      required:
+        - refreshToken
+      properties:
+        role:
+          type: string
+
