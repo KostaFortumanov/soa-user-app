@@ -3,30 +3,36 @@ import connexion
 from keycloak import KeycloakOpenID
 from keycloak import KeycloakAdmin
 
-keycloak_openid = KeycloakOpenID(server_url="http://localhost:8080/auth",
+keycloak_openid = KeycloakOpenID(server_url="http://localhost:8080/auth/",
                                  client_id="account",
-                                 realm_name="master",
-                                 client_secret_key="uRQtLzpNKb9q1YmqTbqQDcXfy9JUUprj")
+                                 realm_name="master", client_secret_key='nlpMjHfGrkTjScyZlRivG6gIxpf5KAkH')
 
-keycloak_admin = KeycloakAdmin(server_url="http://localhost:8080/auth", client_id='account',
-                               client_secret_key="uRQtLzpNKb9q1YmqTbqQDcXfy9JUUprj", username='admin', password="kosta")
+keycloak_admin = KeycloakAdmin(server_url="http://localhost:8080/auth/", client_id='account',
+                               client_secret_key='nlpMjHfGrkTjScyZlRivG6gIxpf5KAkH', username='admin', password="kosta")
 
 client_id = keycloak_admin.get_client_id('account')
-# keycloak_admin.create_client_role(client_id, {'name': 'customer', 'clientRole': True})
-# keycloak_admin.create_client_role(client_id, {'name': 'employee', 'clientRole': True})
-# keycloak_admin.create_client_role(client_id, {'name': 'admin', 'clientRole': True})
 
-app = Flask(__name__)
+
+def setup_roles():
+    roles = keycloak_admin.get_client_roles(client_id)
+    role_names = [role['name'] for role in roles]
+    if 'customer' not in role_names:
+        keycloak_admin.create_client_role(client_id, {'name': 'customer', 'clientRole': True})
+    if 'employee' not in role_names:
+        keycloak_admin.create_client_role(client_id, {'name': 'employee', 'clientRole': True})
+    if 'admin' not in role_names:
+        keycloak_admin.create_client_role(client_id, {'name': 'admin', 'clientRole': True})
 
 
 def register_customer(register_body):
     username = register_body['username']
     password = register_body['password']
 
-    user_id = keycloak_admin.create_user({"email": username,
+    user_id = keycloak_admin.create_user({"email": username + "@gmail.com",
                                           "username": username,
                                           "enabled": True,
-                                          "credentials": [{"value": password, "type": "password", }]}, exist_ok=False)
+                                          "credentials": [{"value": password, "type": "password", }]}, exist_ok=True)
+                                          # "credentials": [{"value": password, "type": "password", }]}, exist_ok=False)
 
     role = keycloak_admin.get_client_role(client_id=client_id, role_name="customer")
     keycloak_admin.assign_client_role(client_id=client_id, user_id=user_id, roles=[role])
@@ -90,7 +96,7 @@ def logout(refresh_token_body):
 
 def contains_role(role, token):
     KEYCLOAK_PUBLIC_KEY = "-----BEGIN PUBLIC KEY-----\n" + keycloak_openid.public_key() + "\n-----END PUBLIC KEY-----"
-    options = {"verify_signature": True, "verify_aud": True, "verify_exp": True}
+    options = {"verify_signature": True, "verify_aud": False, "verify_exp": True}
     token_info = keycloak_openid.decode_token(token, key=KEYCLOAK_PUBLIC_KEY, options=options)
 
     if role in token_info['resource_access']['account']['roles']:
@@ -103,7 +109,7 @@ def user_info():
     auth_header = request.headers['Authorization']
     token = auth_header.split(" ")[1]
     KEYCLOAK_PUBLIC_KEY = "-----BEGIN PUBLIC KEY-----\n" + keycloak_openid.public_key() + "\n-----END PUBLIC KEY-----"
-    options = {"verify_signature": True, "verify_aud": True, "verify_exp": True}
+    options = {"verify_signature": True, "verify_aud": False, "verify_exp": True}
     return keycloak_openid.decode_token(token, key=KEYCLOAK_PUBLIC_KEY, options=options)
 
 
@@ -117,4 +123,5 @@ app = connexion_app.app
 connexion_app.add_api("api.yml")
 
 if __name__ == '__main__':
+    setup_roles()
     app.run()
