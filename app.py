@@ -1,16 +1,19 @@
+import os
+
 from flask import Flask, request, abort
 import connexion
 from keycloak import KeycloakOpenID
 from keycloak import KeycloakAdmin
 
-keycloak_openid = KeycloakOpenID(server_url="http://localhost:8080/auth/",
-                                 client_id="account",
-                                 realm_name="master", client_secret_key='nlpMjHfGrkTjScyZlRivG6gIxpf5KAkH')
+keycloak_openid = KeycloakOpenID(server_url=os.environ['KEYCLOAK_URI'],
+                                 client_id=os.environ['KEYCLOAK_CLIENT_ID'],
+                                 realm_name="master", client_secret_key=os.environ['KEYCLOAK_SECRET_KEY'])
 
-keycloak_admin = KeycloakAdmin(server_url="http://localhost:8080/auth/", client_id='account',
-                               client_secret_key='nlpMjHfGrkTjScyZlRivG6gIxpf5KAkH', username='admin', password="kosta")
+keycloak_admin = KeycloakAdmin(server_url=os.environ['KEYCLOAK_URI'], client_id=os.environ['KEYCLOAK_CLIENT_ID'],
+                               client_secret_key=os.environ['KEYCLOAK_SECRET_KEY'],
+                               username=os.environ['KEYCLOAK_USERNAME'], password=os.environ['KEYCLOAK_PASSWORD'])
 
-client_id = keycloak_admin.get_client_id('account')
+client_id = keycloak_admin.get_client_id(os.environ['KEYCLOAK_CLIENT_ID'])
 
 
 def setup_roles():
@@ -24,6 +27,11 @@ def setup_roles():
         keycloak_admin.create_client_role(client_id, {'name': 'admin', 'clientRole': True})
 
 
+# def import_realm():
+#     with open("./realm-export.json", "r+") as payload:
+#         keycloak_admin.import_realm("".join(payload.readlines()))
+
+
 def register_customer(register_body):
     username = register_body['username']
     password = register_body['password']
@@ -32,7 +40,7 @@ def register_customer(register_body):
                                           "username": username,
                                           "enabled": True,
                                           "credentials": [{"value": password, "type": "password", }]}, exist_ok=True)
-                                          # "credentials": [{"value": password, "type": "password", }]}, exist_ok=False)
+    # "credentials": [{"value": password, "type": "password", }]}, exist_ok=False)
 
     role = keycloak_admin.get_client_role(client_id=client_id, role_name="customer")
     keycloak_admin.assign_client_role(client_id=client_id, user_id=user_id, roles=[role])
