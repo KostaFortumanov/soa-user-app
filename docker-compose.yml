@@ -35,12 +35,11 @@ services:
 
   user-app:
     container_name: user-app
+    restart: always
     build:
       context: ./
       dockerfile: ./Dockerfile
     depends_on:
       - user-keycloak
-    env_file:
-      - ./.env
     ports:
       - 8000:5000

@@ -80,6 +80,15 @@ paths:
           description: User info
         401:
           description: Bad request
+  /wellKnown:
+    get:
+      tags: [ Well known ]
+      operationId: app.well_known
+      responses:
+        200:
+          description: User info
+        401:
+          description: Bad request
   /refreshToken:
     post:
       tags: [ Refresh token ]

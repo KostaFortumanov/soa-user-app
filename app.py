@@ -1,17 +1,29 @@
-import os
+from pathlib import Path
+from typing import Optional
 
+from dotenv import load_dotenv
 from flask import Flask, request, abort
 import connexion
+from flask_cors import CORS
 from keycloak import KeycloakOpenID
 from keycloak import KeycloakAdmin
 
+import os
+
+load_dotenv()
+
 keycloak_openid = KeycloakOpenID(server_url=os.environ['KEYCLOAK_URI'],
                                  client_id=os.environ['KEYCLOAK_CLIENT_ID'],
-                                 realm_name=os.environ["KEYCLOAK_REALM_NAME"], client_secret_key=os.environ['KEYCLOAK_SECRET_KEY'])
+                                 realm_name=os.environ["KEYCLOAK_REALM_NAME"],
+                                 client_secret_key=os.environ['KEYCLOAK_SECRET_KEY'])
 
-keycloak_admin = KeycloakAdmin(server_url=os.environ['KEYCLOAK_URI'], client_id=os.environ['KEYCLOAK_CLIENT_ID'],
+keycloak_admin = KeycloakAdmin(server_url=os.environ['KEYCLOAK_URI'],
+                               client_id=os.environ['KEYCLOAK_CLIENT_ID'],
+                               realm_name=os.environ['KEYCLOAK_REALM_NAME'],
                                client_secret_key=os.environ['KEYCLOAK_SECRET_KEY'],
-                               username=os.environ['KEYCLOAK_ADMIN'], password=os.environ['KEYCLOAK_ADMIN_PASSWORD'])
+                               username=os.environ['KEYCLOAK_ADMIN'],
+                               password=os.environ['KEYCLOAK_ADMIN_PASSWORD'],
+                               auto_refresh_token=['get', 'post', 'put'])
 
 client_id = keycloak_admin.get_client_id(os.environ['KEYCLOAK_CLIENT_ID'])
 
@@ -27,11 +39,6 @@ def setup_roles():
         keycloak_admin.create_client_role(client_id, {'name': 'admin', 'clientRole': True})
 
 
-# def import_realm():
-#     with open("./realm-export.json.back2", "r+") as payload:
-#         keycloak_admin.import_realm("".join(payload.readlines()))
-
-
 def register_customer(register_body):
     username = register_body['username']
     password = register_body['password']
@@ -39,7 +46,7 @@ def register_customer(register_body):
     user_id = keycloak_admin.create_user({"email": username + "@gmail.com",
                                           "username": username,
                                           "enabled": True,
-                                          "credentials": [{"value": password, "type": "password", }]}, exist_ok=True)
+                                          "credentials": [{"value": password, "type": "password"}]}, exist_ok=True)
     # "credentials": [{"value": password, "type": "password", }]}, exist_ok=False)
 
     role = keycloak_admin.get_client_role(client_id=client_id, role_name="customer")
@@ -62,7 +69,7 @@ def register_employee(register_employee_body):
     auth_header = request.headers['Authorization']
     token = auth_header.split(" ")[1]
 
-    if not contains_role('admin', token):
+    if not contains_role('admin', token, "soa-account"):
         abort(401)
 
     username = register_employee_body['username']
@@ -84,6 +91,11 @@ def register_employee(register_employee_body):
 
 
 def create_role(create_role_body):
+    auth_header = request.headers['Authorization']
+    token = auth_header.split(" ")[1]
+
+    if not contains_role('admin', token, "soa-account"):
+        abort(401)
     keycloak_admin.create_client_role(client_id, {'name': create_role_body['role'], 'clientRole': True})
     return "Role created"
 
@@ -91,7 +103,7 @@ def create_role(create_role_body):
 def user_contains_role(role_body):
     auth_header = request.headers['Authorization']
     token = auth_header.split(" ")[1]
-    return contains_role(role_body['role'], token)
+    return contains_role(role_body['role'], token, "soa-account")
 
 
 def refresh_token(refresh_token_body):
@@ -102,12 +114,12 @@ def logout(refresh_token_body):
     keycloak_openid.logout(refresh_token_body['refreshToken'])
 
 
-def contains_role(role, token):
+def contains_role(role, token, client):
     KEYCLOAK_PUBLIC_KEY = "-----BEGIN PUBLIC KEY-----\n" + keycloak_openid.public_key() + "\n-----END PUBLIC KEY-----"
     options = {"verify_signature": True, "verify_aud": False, "verify_exp": True}
     token_info = keycloak_openid.decode_token(token, key=KEYCLOAK_PUBLIC_KEY, options=options)
 
-    if role in token_info['resource_access']['account']['roles']:
+    if role in token_info['resource_access'][client]['roles']:
         return True
 
     return False
@@ -127,9 +139,10 @@ def get_token_response(token):
 
 
 connexion_app = connexion.App(__name__, specification_dir="./")
+CORS(connexion_app.app)
 app = connexion_app.app
 connexion_app.add_api("api.yml")
 
 if __name__ == '__main__':
     setup_roles()
-    app.run()
+    app.run(host="0.0.0.0")
