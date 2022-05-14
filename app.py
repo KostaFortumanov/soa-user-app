@@ -7,11 +7,11 @@ from keycloak import KeycloakAdmin
 
 keycloak_openid = KeycloakOpenID(server_url=os.environ['KEYCLOAK_URI'],
                                  client_id=os.environ['KEYCLOAK_CLIENT_ID'],
-                                 realm_name="master", client_secret_key=os.environ['KEYCLOAK_SECRET_KEY'])
+                                 realm_name=os.environ["KEYCLOAK_REALM_NAME"], client_secret_key=os.environ['KEYCLOAK_SECRET_KEY'])
 
 keycloak_admin = KeycloakAdmin(server_url=os.environ['KEYCLOAK_URI'], client_id=os.environ['KEYCLOAK_CLIENT_ID'],
                                client_secret_key=os.environ['KEYCLOAK_SECRET_KEY'],
-                               username=os.environ['KEYCLOAK_USERNAME'], password=os.environ['KEYCLOAK_PASSWORD'])
+                               username=os.environ['KEYCLOAK_ADMIN'], password=os.environ['KEYCLOAK_ADMIN_PASSWORD'])
 
 client_id = keycloak_admin.get_client_id(os.environ['KEYCLOAK_CLIENT_ID'])
 
@@ -28,7 +28,7 @@ def setup_roles():
 
 
 # def import_realm():
-#     with open("./realm-export.json", "r+") as payload:
+#     with open("./realm-export.json.back2", "r+") as payload:
 #         keycloak_admin.import_realm("".join(payload.readlines()))
 
 
