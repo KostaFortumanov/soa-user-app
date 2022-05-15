@@ -252,7 +252,7 @@ paths:
       security:
         - jwt: [ ]
       tags:
-        - Authentication
+        - User
       requestBody:
         content:
           application/json:
