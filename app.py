@@ -11,6 +11,8 @@ from swagger_ui_bundle import swagger_ui_3_path
 
 import os
 
+# Setup
+
 load_dotenv()
 
 CLIENT_NAME = "soa-account"
@@ -49,6 +51,60 @@ def setup_keycloak():
         keycloak_admin.create_client_role(client_id, {'name': 'admin', 'clientRole': True})
 
 
+# Utility
+
+def _token_info(token: str):
+    KEYCLOAK_PUBLIC_KEY = "-----BEGIN PUBLIC KEY-----\n" + keycloak_openid.public_key() + "\n-----END PUBLIC KEY-----"
+    options = {"verify_signature": True, "verify_aud": False, "verify_exp": True}
+    return keycloak_openid.decode_token(token, key=KEYCLOAK_PUBLIC_KEY, options=options)
+
+
+def _current_user_info(token: str):
+    data = _token_info(token)
+    return _user_info(data['preferred_username'])
+
+
+def _user_info(username: str):
+    id = keycloak_admin.get_user_id(username)
+    return keycloak_admin.get_user(id)
+
+
+def _extract_token(req):
+    auth_header = req.headers['Authorization']
+    token = auth_header.split(" ")[1]
+    return token
+
+
+def _transform_token(token):
+    return {"access_token": token['access_token'], "refresh_token": token['refresh_token'],
+            "expires_in": token['expires_in'], "refresh_expires_in": token['refresh_expires_in']}
+
+
+# /auth
+
+def auth(body):
+    username = body['username']
+    password = body['password']
+
+    token = keycloak_openid.token(username, password)
+    return _transform_token(token)
+
+
+def logout(body):
+    keycloak_openid.logout(body['refreshToken'])
+
+
+def refresh_token(body):
+    return keycloak_openid.refresh_token(body['refreshToken'])
+
+
+def token_info():
+    token = _extract_token(request)
+    return _token_info(token)
+
+
+# /user
+
 def register_customer(body):
     username = body['username']
     password = body['password']
@@ -64,19 +120,11 @@ def register_customer(body):
 
     token = keycloak_openid.token(username, password)
 
-    return get_token_response(token)
-
-
-def auth(body):
-    username = body['username']
-    password = body['password']
-
-    token = keycloak_openid.token(username, password)
-    return get_token_response(token)
+    return _transform_token(token)
 
 
 def register_employee(body):
-    token = extract_token(request)
+    token = _extract_token(request)
 
     if not contains_role('admin', token, CLIENT_NAME):
         abort(401)
@@ -96,76 +144,26 @@ def register_employee(body):
 
     token = keycloak_openid.token(username, password)
 
-    return get_token_response(token)
-
-
-def create_role(body):
-    token = extract_token(request)
-
-    if not contains_role('admin', token, CLIENT_NAME):
-        abort(401)
-    keycloak_admin.create_client_role(client_id,
-                                      {'name': body['role'], 'clientRole': True, "attributes": body['attributes']})
-    return keycloak_admin.get_client_role(client_id, body['role'])
-
-
-def user_contains_role(body):
-    token = extract_token(request)
-    return contains_role(body['role'], token, CLIENT_NAME)
-
-
-def refresh_token(body):
-    return keycloak_openid.refresh_token(body['refreshToken'])
-
-
-def logout(body):
-    keycloak_openid.logout(body['refreshToken'])
-
-
-def contains_role(role, token, client):
-    token_data = _token_info(token)
-    print(token_data)
-    if role in token_data['resource_access'][client]['roles']:
-        return True
-
-    return False
-
-
-def token_info():
-    token = extract_token(request)
-    return _token_info(token)
-
-
-def _token_info(token: str):
-    KEYCLOAK_PUBLIC_KEY = "-----BEGIN PUBLIC KEY-----\n" + keycloak_openid.public_key() + "\n-----END PUBLIC KEY-----"
-    options = {"verify_signature": True, "verify_aud": False, "verify_exp": True}
-    return keycloak_openid.decode_token(token, key=KEYCLOAK_PUBLIC_KEY, options=options)
+    return _transform_token(token)
 
 
 def user_info():
-    token = extract_token(request)
+    token = _extract_token(request)
     return _current_user_info(token)
 
 
-def _current_user_info(token: str):
-    data = _token_info(token)
-    return _user_info(data['preferred_username'])
+def any_user_info(body):
+    token = _extract_token(request)
+    if not contains_role('admin', token, CLIENT_NAME):
+        abort(401)
 
-
-def _user_info(username: str):
-    id = keycloak_admin.get_user_id(username)
-    return keycloak_admin.get_user(id)
-
-
-def get_token_response(token):
-    return {"access_token": token['access_token'], "refresh_token": token['refresh_token'],
-            "expires_in": token['expires_in'], "refresh_expires_in": token['refresh_expires_in']}
+    return _user_info(body['username'])
 
 
 # TODO: Update User
 def update_user(body):
     # clientRoles & realmRoles (but custom I guess with built-in set_role or w/e, we'll see)
-    token = extract_token(request)
+    token = _extract_token(request)
     user = _current_user_info(token)
     if not contains_role('admin', token, CLIENT_NAME) and user['id'] != body['id']:
         abort(401)
@@ -181,38 +179,8 @@ def update_user(body):
     return keycloak_admin.get_user(id)
 
 
-def extract_token(req):
-    auth_header = req.headers['Authorization']
-    token = auth_header.split(" ")[1]
-    return token
-
-
-def any_user_info(body):
-    token = extract_token(request)
-    if not contains_role('admin', token, CLIENT_NAME):
-        abort(401)
-
-    return _user_info(body['username'])
-
-
-def delete_role(body):
-    token = extract_token(request)
-    if not contains_role('admin', token, CLIENT_NAME):
-        abort(401)
-
-    keycloak_admin.delete_client_role(client_id, body['role'])
-
-
-def get_roles():
-    return keycloak_admin.get_client_roles(client_id)
-
-
-def get_role(body):
-    return keycloak_admin.get_client_role(client_id, body['role'])
-
-
 def delete_user(body):
-    token = extract_token(request)
+    token = _extract_token(request)
     user = _current_user_info(token)
     if not contains_role('admin', token, CLIENT_NAME) and user['id'] != body['id']:
         abort(401)
@@ -220,13 +188,55 @@ def delete_user(body):
     keycloak_admin.delete_user(user['id'])
 
 
+# /role
+
+def create_role(body):
+    token = _extract_token(request)
+
+    if not contains_role('admin', token, CLIENT_NAME):
+        abort(401)
+    keycloak_admin.create_client_role(client_id,
+                                      {'name': body['role'], 'clientRole': True, "attributes": body['attributes']})
+    return keycloak_admin.get_client_role(client_id, body['role'])
+
+
+def get_role(body):
+    return keycloak_admin.get_client_role(client_id, body['role'])
+
+
+def get_roles():
+    return keycloak_admin.get_client_roles(client_id)
+
+
+def delete_role(body):
+    token = _extract_token(request)
+    if not contains_role('admin', token, CLIENT_NAME):
+        abort(401)
+
+    keycloak_admin.delete_client_role(client_id, body['role'])
+
+
+def user_contains_role(body):
+    token = _extract_token(request)
+    return contains_role(body['role'], token, CLIENT_NAME)
+
+
+def contains_role(role, token, client):
+    token_data = _token_info(token)
+    print(token_data)
+    if role in token_data['resource_access'][client]['roles']:
+        return True
+
+    return False
+
+
 # TODO: Check token expiration
 
 
-# TODO: Go through swagger-ui and find faulty definitions of request models
 # TODO: Create guide for "import" and custom access token lifespan configuration and enabling update of usernames
 # TODO: Separate contains_role and user_info in a separate package/project so other teams can copy/import it
-
+# TODO: Better description for status codes, and make status codes better in general
+# TODO: Implement assignment and un-assignment of roles per user
 
 connexion_app = connexion.App(__name__, specification_dir="./", options={'swagger_path': swagger_ui_3_path})
 CORS(connexion_app.app)
