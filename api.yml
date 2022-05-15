@@ -98,6 +98,8 @@ paths:
               properties:
                 role:
                   type: string
+                attributes:
+                  type: object
         description: Create role
       responses:
         "200":
@@ -120,8 +122,6 @@ paths:
           description: Bad request
   /getRole:
     post:
-      security:
-        - jwt: [ ]
       tags:
         - Role
       operationId: app.get_role
@@ -130,6 +130,30 @@ paths:
       responses:
         "200":
           description: Get role
+        "401":
+          description: Bad request
+  /getRoles:
+    get:
+      tags:
+        - Role
+      operationId: app.get_roles
+      responses:
+        "200":
+          description: Get list of roles
+        "401":
+          description: Bad request
+  /deleteRole:
+    post:
+      security:
+        - jwt: [ ]
+      tags:
+        - Role
+      operationId: app.delete_role
+      requestBody:
+        $ref: "#/components/requestBodies/app.user_contains_roleRoleBody"
+      responses:
+        "200":
+          description: Delete role
         "401":
           description: Bad request
   /userInfo:

@@ -13,6 +13,8 @@ import os
 
 load_dotenv()
 
+CLIENT_NAME = "soa-account"
+
 keycloak_openid = KeycloakOpenID(server_url=os.environ['KEYCLOAK_URI'],
                                  client_id=os.environ['KEYCLOAK_CLIENT_ID'],
                                  realm_name=os.environ["KEYCLOAK_REALM_NAME"],
@@ -29,7 +31,14 @@ keycloak_admin = KeycloakAdmin(server_url=os.environ['KEYCLOAK_URI'],
 client_id = keycloak_admin.get_client_id(os.environ['KEYCLOAK_CLIENT_ID'])
 
 
-def setup_roles():
+def setup_keycloak():
+    # Configure realm
+    keycloak_admin.update_realm("master", payload={
+        "accessTokenLifespan": 1800,
+        "editUsernameAllowed": True
+    })
+
+    # Configure roles
     roles = keycloak_admin.get_client_roles(client_id)
     role_names = [role['name'] for role in roles]
     if 'customer' not in role_names:
@@ -69,7 +78,7 @@ def auth(body):
 def register_employee(body):
     token = extract_token(request)
 
-    if not contains_role('admin', token, "soa-account"):
+    if not contains_role('admin', token, CLIENT_NAME):
         abort(401)
 
     username = body['username']
@@ -93,15 +102,16 @@ def register_employee(body):
 def create_role(body):
     token = extract_token(request)
 
-    if not contains_role('admin', token, "soa-account"):
+    if not contains_role('admin', token, CLIENT_NAME):
         abort(401)
-    keycloak_admin.create_client_role(client_id, {'name': body['role'], 'clientRole': True})
-    return "Role created"
+    keycloak_admin.create_client_role(client_id,
+                                      {'name': body['role'], 'clientRole': True, "attributes": body['attributes']})
+    return keycloak_admin.get_client_role(client_id, body['role'])
 
 
 def user_contains_role(body):
     token = extract_token(request)
-    return contains_role(body['role'], token, "soa-account")
+    return contains_role(body['role'], token, CLIENT_NAME)
 
 
 def refresh_token(body):
@@ -157,7 +167,7 @@ def update_user(body):
     # clientRoles & realmRoles (but custom I guess with built-in set_role or w/e, we'll see)
     token = extract_token(request)
     user = _current_user_info(token)
-    if not contains_role('admin', token, "soa-account") and user['id'] != body['id']:
+    if not contains_role('admin', token, CLIENT_NAME) and user['id'] != body['id']:
         abort(401)
 
     id = body['id']
@@ -177,16 +187,26 @@ def extract_token(req):
     return token
 
 
-# TODO: Add any user-info for admins based on username
 def any_user_info(body):
     token = extract_token(request)
-    if not contains_role('admin', token, "soa-account"):
+    if not contains_role('admin', token, CLIENT_NAME):
         abort(401)
 
     return _user_info(body['username'])
 
 
-# TODO: Update Role
+def delete_role(body):
+    token = extract_token(request)
+    if not contains_role('admin', token, CLIENT_NAME):
+        abort(401)
+
+    keycloak_admin.delete_client_role(client_id, body['role'])
+
+
+def get_roles():
+    return keycloak_admin.get_client_roles(client_id)
+
+
 def get_role(body):
     return keycloak_admin.get_client_role(client_id, body['role'])
 
@@ -205,5 +225,5 @@ app = connexion_app.app
 connexion_app.add_api("api.yml")
 
 if __name__ == '__main__':
-    setup_roles()
+    setup_keycloak()
     app.run(host="0.0.0.0")
