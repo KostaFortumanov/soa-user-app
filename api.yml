@@ -208,6 +208,10 @@ paths:
                   type: string
                 email:
                   type: string
+                roles:
+                  type: array
+                  items:
+                    type: string
                 attributes:
                   type: object
         description: Representation of a user

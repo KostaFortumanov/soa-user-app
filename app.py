@@ -160,19 +160,32 @@ def any_user_info(body):
     return _user_info(body['username'])
 
 
-# TODO: Update User
+# TODO: Implement un-assignment of roles per user --
 def update_user(body):
     # clientRoles & realmRoles (but custom I guess with built-in set_role or w/e, we'll see)
     token = _extract_token(request)
     user = _current_user_info(token)
-    if not contains_role('admin', token, CLIENT_NAME) and user['id'] != body['id']:
+    is_admin = contains_role('admin', token, CLIENT_NAME)
+    if not is_admin and user['id'] != body['id']:
         abort(401)
 
     id = body['id']
     del body['id']
 
-    if 'password' in body.keys() and body['password'] is not None:
-        keycloak_admin.set_user_password(id, body['password'], temporary=False)
+    if 'clientRoles' in body.keys():
+        del body['clientRoles']
+    if 'realmRoles' in body.keys():
+        del body['realmRoles']
+
+    if 'roles' in body.keys():
+        if is_admin:
+            roles = [keycloak_admin.get_client_role(client_id, role) for role in body['roles']]
+            keycloak_admin.assign_client_role(user['id'], client_id, roles)
+        del body['roles']
+
+    if 'password' in body.keys():
+        if body['password'] is not None:
+            keycloak_admin.set_user_password(id, body['password'], temporary=False)
         del body['password']
 
     keycloak_admin.update_user(id, payload=body)
@@ -233,10 +246,9 @@ def contains_role(role, token, client):
 # TODO: Check token expiration
 
 
-# TODO: Create guide for "import" and custom access token lifespan configuration and enabling update of usernames
+# TODO: Create guide for import
 # TODO: Separate contains_role and user_info in a separate package/project so other teams can copy/import it
 # TODO: Better description for status codes, and make status codes better in general
-# TODO: Implement assignment and un-assignment of roles per user
 
 connexion_app = connexion.App(__name__, specification_dir="./", options={'swagger_path': swagger_ui_3_path})
 CORS(connexion_app.app)
