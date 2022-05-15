@@ -92,6 +92,33 @@
   "webAuthnPolicyPasswordlessAcceptableAaguids": [],
   "users": [
     {
+      "id": "a1f8a14e-aa0b-436b-9217-6fcd3cf2f83a",
+      "createdTimestamp": 1652577349554,
+      "username": "soa-admin",
+      "enabled": true,
+      "totp": false,
+      "emailVerified": false,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "27654231c1605128c22ed5776a39f7a2a13d8a127e8d96725eb72b568f340113"
+        }
+      ],
+      "disableableCredentialTypes": [],
+      "requiredActions": [],
+      "realmRoles": [
+        "admin",
+        "default-roles-master"
+      ],
+      "clientRoles": {
+        "soa-account": [
+          "admin"
+        ]
+      },
+      "notBefore": 0,
+      "groups": []
+    },
+    {
       "id": "99712383-b6b8-4c53-8f6d-2766514f2532",
       "createdTimestamp": 1652547995981,
       "username": "service-account-soa-account",

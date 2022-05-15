@@ -1,188 +1,273 @@
-swagger: '2.0'
+openapi: 3.0.0
+
 info:
-  title: Shop Example API
-  version: "0.1"
+  title: Pet Shop Example API
+  version: "1.0"
   description: Simple example API
-consumes:
-  - application/json
-produces:
-  - application/json
-basePath: "/api"
-securityDefinitions:
-  jwt:
-    type: apiKey
-    name: Authorization
-    in: header
-    x-authentication-scheme: Bearer
-    x-bearerInfoFunc: app.decode_token
+
 paths:
   /auth:
     post:
-      tags: [ Auth ]
+      tags:
+        - Authentication
       operationId: app.auth
-      parameters:
-        - $ref: '#/parameters/auth_body'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              required:
+                - username
+                - password
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+        description: Login and get token
       responses:
-        200:
+        "200":
           description: Return jwt token
-        401:
+        "401":
           description: Bad auth
   /registerCustomer:
     post:
-      tags: [ Register ]
+      tags:
+        - User
       operationId: app.register_customer
-      parameters:
-        - $ref: '#/parameters/register_body'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              required:
+                - username
+                - password
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+        description: Register adn get token
       responses:
-        200:
+        "200":
           description: Return jwt token
-        401:
+        "401":
           description: Bad auth
   /registerEmployee:
     post:
-      tags: [ Register ]
+      security:
+        - jwt: [ ]
+      tags:
+        - User
       operationId: app.register_employee
-      parameters:
-        - $ref: '#/parameters/register_employee_body'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              required:
+                - username
+                - password
+                - roles
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+                roles:
+                  type: array
+                  items:
+                    type: string
+        description: Register and get token
       responses:
-        200:
+        "200":
           description: Return jwt token
-        401:
+        "401":
           description: Bad auth
   /createRole:
     post:
-      tags: [ Create role ]
+      security:
+        - jwt: [ ]
+      tags:
+        - Role
       operationId: app.create_role
-      parameters:
-        - $ref: '#/parameters/create_role_body'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              required:
+                - role
+              properties:
+                role:
+                  type: string
+        description: Create role
       responses:
-        200:
+        "200":
           description: Create role
-        401:
+        "401":
           description: Bad request
   /userContainsRole:
     post:
-      tags: [ User contains role ]
+      security:
+        - jwt: [ ]
+      tags:
+        - Role
       operationId: app.user_contains_role
-      parameters:
-        - $ref: '#/parameters/role_body'
+      requestBody:
+        $ref: "#/components/requestBodies/app.user_contains_roleRoleBody"
       responses:
-        200:
+        "200":
           description: Create role
-        401:
+        "401":
+          description: Bad request
+  /getRole:
+    post:
+      security:
+        - jwt: [ ]
+      tags:
+        - Role
+      operationId: app.get_role
+      requestBody:
+        $ref: "#/components/requestBodies/app.user_contains_roleRoleBody"
+      responses:
+        "200":
+          description: Get role
+        "401":
           description: Bad request
   /userInfo:
     get:
-      tags: [ User info ]
+      security:
+        - jwt: [ ]
+      tags:
+        - User
       operationId: app.user_info
       responses:
-        200:
+        "200":
           description: User info
-        401:
+        "401":
           description: Bad request
-  /wellKnown:
-    get:
-      tags: [ Well known ]
-      operationId: app.well_known
+    post:
+      security:
+        - jwt: [ ]
+      tags:
+        - User
+      operationId: app.any_user_info
+      requestBody:
+        content:
+          application/json:
+            schema:
+              required:
+                - username
+              properties:
+                username:
+                  type: string
       responses:
-        200:
-          description: User info
-        401:
+        "200":
+          description: Any user info based on username
+        "401":
+          description: Bad request
+  /tokenInfo:
+    get:
+      security:
+        - jwt: [ ]
+      tags:
+        - Authentication
+      operationId: app.token_info
+      responses:
+        "200":
+          description: Token info
+        "401":
           description: Bad request
   /refreshToken:
     post:
-      tags: [ Refresh token ]
+      tags:
+        - Authentication
       operationId: app.refresh_token
-      parameters:
-        - $ref: '#/parameters/refresh_token_body'
+      requestBody:
+        $ref: "#/components/requestBodies/app.refresh_tokenRefreshTokenBody"
       responses:
-        200:
+        "200":
           description: Refresh token
-        401:
+        "401":
           description: Bad request
   /logout:
     post:
-      tags: [ Logout ]
+      security:
+        - jwt: [ ]
+      tags:
+        - Authentication
       operationId: app.logout
-      parameters:
-        - $ref: '#/parameters/refresh_token_body'
+      requestBody:
+        $ref: "#/components/requestBodies/app.refresh_tokenRefreshTokenBody"
       responses:
-        200:
+        "200":
           description: Logout
-        401:
+        "401":
+          description: Bad request
+  /updateUser:
+    post:
+      security:
+        - jwt: [ ]
+      tags:
+        - User
+      operationId: app.update_user
+      requestBody:
+        content:
+          application/json:
+            schema:
+              required:
+                - id
+              properties:
+                id:
+                  type: string
+                username:
+                  type: string
+                password:
+                  type: string
+                enabled:
+                  type: boolean
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                email:
+                  type: string
+                attributes:
+                  type: object
+        description: Representation of a user
+      responses:
+        "200":
+          description: Successful update
+        "401":
           description: Bad request
 
-parameters:
-  auth_body:
-    name: auth_body
-    description: Login and get token
-    in: body
-    schema:
-      required:
-        - username
-        - password
-      properties:
-        username:
-          type: string
-        password:
-          type: string
-  register_body:
-    name: register_body
-    description: Register adn get token
-    in: body
-    schema:
-      required:
-        - username
-        - password
-      properties:
-        username:
-          type: string
-        password:
-          type: string
-  register_employee_body:
-    name: register_employee_body
-    description: Register and get token
-    in: body
-    schema:
-      required:
-        - username
-        - password
-        - roles
-      properties:
-        username:
-          type: string
-        password:
-          type: string
-        roles:
-          type: array
-  create_role_body:
-    name: create_role_body
-    description: Create role
-    in: body
-    schema:
-      required:
-        - role
-      properties:
-        role:
-          type: string
-  role_body:
-    name: role_body
-    description: Role
-    in: body
-    schema:
-      required:
-        - role
-      properties:
-        role:
-          type: string
-  refresh_token_body:
-    name: refresh_token_body
-    description: Refresh Token
-    in: body
-    schema:
-      required:
-        - refreshToken
-      properties:
-        role:
-          type: string
+servers:
+  - url: /api
 
+components:
+  requestBodies:
+    app.user_contains_roleRoleBody:
+      content:
+        application/json:
+          schema:
+            required:
+              - role
+            properties:
+              role:
+                type: string
+      description: Role
+    app.refresh_tokenRefreshTokenBody:
+      content:
+        application/json:
+          schema:
+            required:
+              - refreshToken
+            properties:
+              role:
+                type: string
+      description: Refresh Token
+  securitySchemes:
+    jwt:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      x-authentication-scheme: Bearer
+      x-bearerInfoFunc: app._token_info

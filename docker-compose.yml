@@ -32,6 +32,8 @@ services:
     command: start-dev
     depends_on:
       - postgres
+    volumes:
+      - ./export:/export
 
   user-app:
     container_name: user-app

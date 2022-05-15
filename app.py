@@ -7,6 +7,7 @@ import connexion
 from flask_cors import CORS
 from keycloak import KeycloakOpenID
 from keycloak import KeycloakAdmin
+from swagger_ui_bundle import swagger_ui_3_path
 
 import os
 
@@ -39,9 +40,9 @@ def setup_roles():
         keycloak_admin.create_client_role(client_id, {'name': 'admin', 'clientRole': True})
 
 
-def register_customer(register_body):
-    username = register_body['username']
-    password = register_body['password']
+def register_customer(body):
+    username = body['username']
+    password = body['password']
 
     user_id = keycloak_admin.create_user({"email": username + "@gmail.com",
                                           "username": username,
@@ -57,24 +58,23 @@ def register_customer(register_body):
     return get_token_response(token)
 
 
-def auth(auth_body):
-    username = auth_body['username']
-    password = auth_body['password']
+def auth(body):
+    username = body['username']
+    password = body['password']
 
     token = keycloak_openid.token(username, password)
     return get_token_response(token)
 
 
-def register_employee(register_employee_body):
-    auth_header = request.headers['Authorization']
-    token = auth_header.split(" ")[1]
+def register_employee(body):
+    token = extract_token(request)
 
     if not contains_role('admin', token, "soa-account"):
         abort(401)
 
-    username = register_employee_body['username']
-    password = register_employee_body['password']
-    roles = register_employee_body['roles']
+    username = body['username']
+    password = body['password']
+    roles = body['roles']
 
     user_id = keycloak_admin.create_user({"email": username,
                                           "username": username,
@@ -90,47 +90,61 @@ def register_employee(register_employee_body):
     return get_token_response(token)
 
 
-def create_role(create_role_body):
-    auth_header = request.headers['Authorization']
-    token = auth_header.split(" ")[1]
+def create_role(body):
+    token = extract_token(request)
 
     if not contains_role('admin', token, "soa-account"):
         abort(401)
-    keycloak_admin.create_client_role(client_id, {'name': create_role_body['role'], 'clientRole': True})
+    keycloak_admin.create_client_role(client_id, {'name': body['role'], 'clientRole': True})
     return "Role created"
 
 
-def user_contains_role(role_body):
-    auth_header = request.headers['Authorization']
-    token = auth_header.split(" ")[1]
-    return contains_role(role_body['role'], token, "soa-account")
+def user_contains_role(body):
+    token = extract_token(request)
+    return contains_role(body['role'], token, "soa-account")
 
 
-def refresh_token(refresh_token_body):
-    return keycloak_openid.refresh_token(refresh_token_body['refreshToken'])
+def refresh_token(body):
+    return keycloak_openid.refresh_token(body['refreshToken'])
 
 
-def logout(refresh_token_body):
-    keycloak_openid.logout(refresh_token_body['refreshToken'])
+def logout(body):
+    keycloak_openid.logout(body['refreshToken'])
 
 
 def contains_role(role, token, client):
-    KEYCLOAK_PUBLIC_KEY = "-----BEGIN PUBLIC KEY-----\n" + keycloak_openid.public_key() + "\n-----END PUBLIC KEY-----"
-    options = {"verify_signature": True, "verify_aud": False, "verify_exp": True}
-    token_info = keycloak_openid.decode_token(token, key=KEYCLOAK_PUBLIC_KEY, options=options)
-
-    if role in token_info['resource_access'][client]['roles']:
+    token_data = _token_info(token)
+    print(token_data)
+    if role in token_data['resource_access'][client]['roles']:
         return True
 
     return False
 
 
-def user_info():
-    auth_header = request.headers['Authorization']
-    token = auth_header.split(" ")[1]
+def token_info():
+    token = extract_token(request)
+    return _token_info(token)
+
+
+def _token_info(token: str):
     KEYCLOAK_PUBLIC_KEY = "-----BEGIN PUBLIC KEY-----\n" + keycloak_openid.public_key() + "\n-----END PUBLIC KEY-----"
     options = {"verify_signature": True, "verify_aud": False, "verify_exp": True}
     return keycloak_openid.decode_token(token, key=KEYCLOAK_PUBLIC_KEY, options=options)
+
+
+def user_info():
+    token = extract_token(request)
+    return _current_user_info(token)
+
+
+def _current_user_info(token: str):
+    data = _token_info(token)
+    return _user_info(data['preferred_username'])
+
+
+def _user_info(username: str):
+    id = keycloak_admin.get_user_id(username)
+    return keycloak_admin.get_user(id)
 
 
 def get_token_response(token):
@@ -138,7 +152,54 @@ def get_token_response(token):
             "expires_in": token['expires_in'], "refresh_expires_in": token['refresh_expires_in']}
 
 
-connexion_app = connexion.App(__name__, specification_dir="./")
+# TODO: Update User
+def update_user(body):
+    # clientRoles & realmRoles (but custom I guess with built-in set_role or w/e, we'll see)
+    token = extract_token(request)
+    user = _current_user_info(token)
+    if not contains_role('admin', token, "soa-account") and user['id'] != body['id']:
+        abort(401)
+
+    id = body['id']
+    del body['id']
+
+    if 'password' in body.keys() and body['password'] is not None:
+        keycloak_admin.set_user_password(id, body['password'], temporary=False)
+        del body['password']
+
+    keycloak_admin.update_user(id, payload=body)
+    return keycloak_admin.get_user(id)
+
+
+def extract_token(req):
+    auth_header = req.headers['Authorization']
+    token = auth_header.split(" ")[1]
+    return token
+
+
+# TODO: Add any user-info for admins based on username
+def any_user_info(body):
+    token = extract_token(request)
+    if not contains_role('admin', token, "soa-account"):
+        abort(401)
+
+    return _user_info(body['username'])
+
+
+# TODO: Update Role
+def get_role(body):
+    return keycloak_admin.get_client_role(client_id, body['role'])
+
+
+# TODO: Check token expiration
+
+
+# TODO: Go through swagger-ui and find faulty definitions of request models
+# TODO: Create guide for "import" and custom access token lifespan configuration and enabling update of usernames
+# TODO: Separate contains_role and user_info in a separate package/project so other teams can copy/import it
+
+
+connexion_app = connexion.App(__name__, specification_dir="./", options={'swagger_path': swagger_ui_3_path})
 CORS(connexion_app.app)
 app = connexion_app.app
 connexion_app.add_api("api.yml")
