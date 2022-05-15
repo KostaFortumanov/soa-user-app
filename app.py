@@ -127,8 +127,7 @@ def register_customer(body):
     user_id = keycloak_admin.create_user({"email": username + "@gmail.com",
                                           "username": username,
                                           "enabled": True,
-                                          "credentials": [{"value": password, "type": "password"}]}, exist_ok=True)
-    # "credentials": [{"value": password, "type": "password", }]}, exist_ok=False)
+                                          "credentials": [{"value": password, "type": "password"}]}, exist_ok=False)
 
     role = keycloak_admin.get_client_role(client_id=client_id, role_name="customer")
     keycloak_admin.assign_client_role(client_id=client_id, user_id=user_id, roles=[role])
@@ -289,8 +288,10 @@ def contains_role(role, token, client):
     return False
 
 
-# TODO: Create guide for import
-# TODO: Separate contains_role and user_info in a separate package/project so other teams can copy/import it
+# TODO: Separate contains_role and user_info in a separate package/project so other teams can copy it -- DEPRECATED
+#  Reasoning: Beats the purpose of our micro-service, others will end up doing double configuration and it will open up
+#  more work for everyone
+
 # TODO: Better description for status codes, and make status codes more precise in general
 
 connexion_app = connexion.App(__name__, specification_dir="./", options={'swagger_path': swagger_ui_3_path})
