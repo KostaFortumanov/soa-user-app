@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from flask import Flask, request, abort
 import connexion
 from flask_cors import CORS
-from keycloak import KeycloakOpenID
+from keycloak import KeycloakOpenID, KeycloakGetError
 from keycloak import KeycloakAdmin
 from swagger_ui_bundle import swagger_ui_3_path
 
@@ -24,12 +24,12 @@ keycloak_openid = KeycloakOpenID(server_url=os.environ['KEYCLOAK_URI'],
                                  client_secret_key=os.environ['KEYCLOAK_SECRET_KEY'])
 
 keycloak_admin = SOAKeycloakAdmin(server_url=os.environ['KEYCLOAK_URI'],
-                               client_id=os.environ['KEYCLOAK_CLIENT_ID'],
-                               realm_name=os.environ['KEYCLOAK_REALM_NAME'],
-                               client_secret_key=os.environ['KEYCLOAK_SECRET_KEY'],
-                               username=os.environ['KEYCLOAK_ADMIN'],
-                               password=os.environ['KEYCLOAK_ADMIN_PASSWORD'],
-                               auto_refresh_token=['get', 'post', 'put'])
+                                  client_id=os.environ['KEYCLOAK_CLIENT_ID'],
+                                  realm_name=os.environ['KEYCLOAK_REALM_NAME'],
+                                  client_secret_key=os.environ['KEYCLOAK_SECRET_KEY'],
+                                  username=os.environ['KEYCLOAK_ADMIN'],
+                                  password=os.environ['KEYCLOAK_ADMIN_PASSWORD'],
+                                  auto_refresh_token=['get', 'post', 'put'])
 
 client_id = keycloak_admin.get_client_id(os.environ['KEYCLOAK_CLIENT_ID'])
 
@@ -108,6 +108,15 @@ def token_info():
     return _token_info(token)
 
 
+def check_token_validity():
+    token = _extract_token(request)
+    try:
+        keycloak_openid.userinfo(token)
+        return True
+    except KeycloakGetError:
+        return False
+
+
 # /user
 
 def register_customer(body):
@@ -165,7 +174,19 @@ def any_user_info(body):
     return _user_info(body['username'])
 
 
-# TODO: Implement un-assignment of roles per user --
+def simple_user_info():
+    token = _extract_token(request)
+    return keycloak_openid.userinfo(token)
+
+
+def complex_user_info():
+    token = _extract_token(request)
+    user_info_data = _current_user_info(token)
+    token_info_data = _token_info(token)
+    user_info_data.update(token_info_data)
+    return user_info_data
+
+
 def update_user(body):
     # clientRoles & realmRoles (but custom I guess with built-in set_role or w/e, we'll see)
     token = _extract_token(request)
@@ -240,6 +261,20 @@ def delete_role(body):
     keycloak_admin.delete_client_role(client_id, body['role'])
 
 
+def update_role(body):
+    token = _extract_token(request)
+    if not contains_role("admin", token, CLIENT_NAME):
+        abort(401)
+
+    role = keycloak_admin.get_client_role(client_id, body['role'])
+    role['attributes'] = body['attributes']
+    try:
+        keycloak_admin.update_role(role)
+        return keycloak_admin.get_client_role(client_id, role['name'])
+    except KeycloakGetError:
+        abort(401, "Role attributes can only be lists!")
+
+
 def user_contains_role(body):
     token = _extract_token(request)
     return contains_role(body['role'], token, CLIENT_NAME)
@@ -253,12 +288,9 @@ def contains_role(role, token, client):
     return False
 
 
-# TODO: Check token expiration
-
-
 # TODO: Create guide for import
 # TODO: Separate contains_role and user_info in a separate package/project so other teams can copy/import it
-# TODO: Better description for status codes, and make status codes better in general
+# TODO: Better description for status codes, and make status codes more precise in general
 
 connexion_app = connexion.App(__name__, specification_dir="./", options={'swagger_path': swagger_ui_3_path})
 CORS(connexion_app.app)

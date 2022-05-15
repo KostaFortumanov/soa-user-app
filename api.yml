@@ -68,6 +68,19 @@ paths:
           description: Token info
         "401":
           description: Bad request
+  /auth/token/valid:
+    get:
+      summary: Get user info
+      security:
+        - jwt: [ ]
+      tags:
+        - Authentication
+      operationId: app.check_token_validity
+      responses:
+        "200":
+          description: Token info
+        "401":
+          description: Bad request
   /auth/token/refresh:
     post:
       summary: Refresh a token
@@ -145,6 +158,19 @@ paths:
           description: Return jwt token
         "401":
           description: Bad auth
+  /user/info/simple:
+    get:
+      summary: Get the smallest object that represents the current user
+      security:
+        - jwt: [ ]
+      tags:
+        - User
+      operationId: app.simple_user_info
+      responses:
+        "200":
+          description: User info
+        "401":
+          description: Bad request
   /user/info:
     get:
       summary: Get an object that represents the current user
@@ -177,6 +203,19 @@ paths:
       responses:
         "200":
           description: Any user info based on username
+        "401":
+          description: Bad request
+  /user/info/complex:
+    get:
+      summary: Get the combined object that represents the current user (user info with token info)
+      security:
+        - jwt: [ ]
+      tags:
+        - User
+      operationId: app.complex_user_info
+      responses:
+        "200":
+          description: User info
         "401":
           description: Bad request
   /user/update:
@@ -291,6 +330,32 @@ paths:
       responses:
         "200":
           description: Get list of roles
+        "401":
+          description: Bad request
+  /role/update:
+    put:
+      summary: Update a client role
+      security:
+        - jwt: [ ]
+      tags:
+        - Role
+      operationId: app.update_role
+      requestBody:
+        content:
+          application/json:
+            schema:
+              required:
+                - role
+                - attributes
+              properties:
+                role:
+                  type: string
+                attributes:
+                  type: object
+        description: Create role
+      responses:
+        "200":
+          description: Create role
         "401":
           description: Bad request
   /role/delete:
