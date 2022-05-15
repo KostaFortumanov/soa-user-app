@@ -37,6 +37,7 @@ client_id = keycloak_admin.get_client_id(os.environ['KEYCLOAK_CLIENT_ID'])
 def setup_keycloak():
     # Configure realm
     keycloak_admin.update_realm("master", payload={
+        "ssoSessionIdleTimeout": 3600,
         "accessTokenLifespan": 1800,
         "editUsernameAllowed": True
     })
