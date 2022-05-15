@@ -12,6 +12,7 @@ from swagger_ui_bundle import swagger_ui_3_path
 import os
 
 # Setup
+from middleware.SOAKeycloakAdmin import SOAKeycloakAdmin
 
 load_dotenv()
 
@@ -22,7 +23,7 @@ keycloak_openid = KeycloakOpenID(server_url=os.environ['KEYCLOAK_URI'],
                                  realm_name=os.environ["KEYCLOAK_REALM_NAME"],
                                  client_secret_key=os.environ['KEYCLOAK_SECRET_KEY'])
 
-keycloak_admin = KeycloakAdmin(server_url=os.environ['KEYCLOAK_URI'],
+keycloak_admin = SOAKeycloakAdmin(server_url=os.environ['KEYCLOAK_URI'],
                                client_id=os.environ['KEYCLOAK_CLIENT_ID'],
                                realm_name=os.environ['KEYCLOAK_REALM_NAME'],
                                client_secret_key=os.environ['KEYCLOAK_SECRET_KEY'],
@@ -73,6 +74,10 @@ def _extract_token(req):
     auth_header = req.headers['Authorization']
     token = auth_header.split(" ")[1]
     return token
+
+
+def _extract_roles(data, client):
+    return data['resource_access'][client]['roles']
 
 
 def _transform_token(token):
@@ -179,6 +184,12 @@ def update_user(body):
 
     if 'roles' in body.keys():
         if is_admin:
+            # Un assign all
+            assigned_roles = [keycloak_admin.get_client_role(client_id, role) for role in
+                              _extract_roles(_token_info(token), CLIENT_NAME)]
+            keycloak_admin.unassign_client_role(user['id'], client_id, assigned_roles)
+
+            # Assign new
             roles = [keycloak_admin.get_client_role(client_id, role) for role in body['roles']]
             keycloak_admin.assign_client_role(user['id'], client_id, roles)
         del body['roles']
@@ -236,8 +247,7 @@ def user_contains_role(body):
 
 def contains_role(role, token, client):
     token_data = _token_info(token)
-    print(token_data)
-    if role in token_data['resource_access'][client]['roles']:
+    if role in _extract_roles(token_data, client):
         return True
 
     return False
