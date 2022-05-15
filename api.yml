@@ -6,7 +6,7 @@ info:
   description: Simple example API
 
 paths:
-  /auth:
+  /auth/login:
     post:
       tags:
         - Authentication
@@ -29,7 +29,7 @@ paths:
           description: Return jwt token
         "401":
           description: Bad auth
-  /registerCustomer:
+  /user/register/customer:
     post:
       tags:
         - User
@@ -52,7 +52,7 @@ paths:
           description: Return jwt token
         "401":
           description: Bad auth
-  /registerEmployee:
+  /user/register/employee:
     post:
       security:
         - jwt: [ ]
@@ -82,7 +82,7 @@ paths:
           description: Return jwt token
         "401":
           description: Bad auth
-  /createRole:
+  /role/create:
     post:
       security:
         - jwt: [ ]
@@ -106,7 +106,7 @@ paths:
           description: Create role
         "401":
           description: Bad request
-  /userContainsRole:
+  /role/userContains:
     post:
       security:
         - jwt: [ ]
@@ -120,7 +120,7 @@ paths:
           description: Create role
         "401":
           description: Bad request
-  /getRole:
+  /role:
     post:
       tags:
         - Role
@@ -132,7 +132,7 @@ paths:
           description: Get role
         "401":
           description: Bad request
-  /getRoles:
+  /role/all:
     get:
       tags:
         - Role
@@ -142,7 +142,7 @@ paths:
           description: Get list of roles
         "401":
           description: Bad request
-  /deleteRole:
+  /role/delete:
     post:
       security:
         - jwt: [ ]
@@ -156,7 +156,7 @@ paths:
           description: Delete role
         "401":
           description: Bad request
-  /userInfo:
+  /user/info:
     get:
       security:
         - jwt: [ ]
@@ -188,7 +188,7 @@ paths:
           description: Any user info based on username
         "401":
           description: Bad request
-  /tokenInfo:
+  /token/info:
     get:
       security:
         - jwt: [ ]
@@ -200,7 +200,7 @@ paths:
           description: Token info
         "401":
           description: Bad request
-  /refreshToken:
+  /auth/token/refresh:
     post:
       tags:
         - Authentication
@@ -212,7 +212,7 @@ paths:
           description: Refresh token
         "401":
           description: Bad request
-  /logout:
+  /auth/logout:
     post:
       security:
         - jwt: [ ]
@@ -226,8 +226,8 @@ paths:
           description: Logout
         "401":
           description: Bad request
-  /updateUser:
-    post:
+  /user/update:
+    put:
       security:
         - jwt: [ ]
       tags:
