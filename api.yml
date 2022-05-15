@@ -11,7 +11,7 @@ servers:
 paths:
   /auth/login:
     post:
-      summary: Login as a user
+      summary: Login as a employee or customer
       tags:
         - Authentication
       operationId: app.auth
@@ -27,7 +27,7 @@ paths:
                   type: string
                 password:
                   type: string
-        description: Login and get token
+        description: authentication with username and password and get jwt token
       responses:
         "200":
           description: Return jwt token
@@ -57,7 +57,7 @@ paths:
           description: Bad request
   /auth/token/info:
     get:
-      summary: Get a decrypted token
+      summary: Get a decrypted token of the current logged in user
       security:
         - jwt: [ ]
       tags:
@@ -70,7 +70,7 @@ paths:
           description: Bad request
   /auth/token/valid:
     get:
-      summary: Get user info
+      summary: check if user info token is valid
       security:
         - jwt: [ ]
       tags:
@@ -78,7 +78,7 @@ paths:
       operationId: app.check_token_validity
       responses:
         "200":
-          description: Token info
+          description: Is token valid
         "401":
           description: Bad request
   /auth/token/refresh:
@@ -105,7 +105,7 @@ paths:
 
   /user/register/customer:
     post:
-      summary: Register a user as a customer
+      summary: Register user as customer
       tags:
         - User
       operationId: app.register_customer
@@ -121,7 +121,7 @@ paths:
                   type: string
                 password:
                   type: string
-        description: Register and get token
+        description: Register customer and get token
       responses:
         "200":
           description: Return jwt token
@@ -215,7 +215,7 @@ paths:
       operationId: app.complex_user_info
       responses:
         "200":
-          description: User info
+          description: Get user object with token info
         "401":
           description: Bad request
   /user/update:
@@ -256,7 +256,7 @@ paths:
         description: Representation of a user
       responses:
         "200":
-          description: Successful update
+          description: User updated sucessfully
         "401":
           description: Bad request
   /user/delete:
@@ -285,7 +285,7 @@ paths:
 
   /role/create:
     post:
-      summary: Create a client role
+      summary: Create a role
       security:
         - jwt: [ ]
       tags:
@@ -305,7 +305,7 @@ paths:
         description: Create role
       responses:
         "200":
-          description: Create role
+          description: Created role successfully
         "401":
           description: Bad request
   /role:
@@ -329,7 +329,7 @@ paths:
       operationId: app.get_roles
       responses:
         "200":
-          description: Get list of roles
+          description: List of all roles
         "401":
           description: Bad request
   /role/update:
@@ -352,10 +352,10 @@ paths:
                   type: string
                 attributes:
                   type: object
-        description: Create role
+        description: Update role with given atributes
       responses:
         "200":
-          description: Create role
+          description: Role updated sucessfully
         "401":
           description: Bad request
   /role/delete:
@@ -370,7 +370,7 @@ paths:
         $ref: "#/components/requestBodies/app.user_contains_roleRoleBody"
       responses:
         "200":
-          description: Delete role
+          description: Role deleted sucessfully
         "401":
           description: Bad request
   /role/userContains:
@@ -385,7 +385,7 @@ paths:
         $ref: "#/components/requestBodies/app.user_contains_roleRoleBody"
       responses:
         "200":
-          description: Create role
+          description: Get True or False depending if user contains specified role
         "401":
           description: Bad request
 
