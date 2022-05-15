@@ -211,6 +211,15 @@ def get_role(body):
     return keycloak_admin.get_client_role(client_id, body['role'])
 
 
+def delete_user(body):
+    token = extract_token(request)
+    user = _current_user_info(token)
+    if not contains_role('admin', token, CLIENT_NAME) and user['id'] != body['id']:
+        abort(401)
+
+    keycloak_admin.delete_user(user['id'])
+
+
 # TODO: Check token expiration
 
 

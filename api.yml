@@ -8,6 +8,7 @@ info:
 paths:
   /auth/login:
     post:
+      summary: Login as a user
       tags:
         - Authentication
       operationId: app.auth
@@ -31,6 +32,7 @@ paths:
           description: Bad auth
   /user/register/customer:
     post:
+      summary: Register a user as a customer
       tags:
         - User
       operationId: app.register_customer
@@ -46,7 +48,7 @@ paths:
                   type: string
                 password:
                   type: string
-        description: Register adn get token
+        description: Register and get token
       responses:
         "200":
           description: Return jwt token
@@ -54,6 +56,7 @@ paths:
           description: Bad auth
   /user/register/employee:
     post:
+      summary: Register a user as an employee
       security:
         - jwt: [ ]
       tags:
@@ -84,6 +87,7 @@ paths:
           description: Bad auth
   /role/create:
     post:
+      summary: Create a client role
       security:
         - jwt: [ ]
       tags:
@@ -108,6 +112,7 @@ paths:
           description: Bad request
   /role/userContains:
     post:
+      summary: Check whether the current user contains a specific client role
       security:
         - jwt: [ ]
       tags:
@@ -122,6 +127,7 @@ paths:
           description: Bad request
   /role:
     post:
+      summary: Get Keycloak object of client role
       tags:
         - Role
       operationId: app.get_role
@@ -134,6 +140,7 @@ paths:
           description: Bad request
   /role/all:
     get:
+      summary: Get all client roles that exist in Keycloak
       tags:
         - Role
       operationId: app.get_roles
@@ -144,6 +151,7 @@ paths:
           description: Bad request
   /role/delete:
     post:
+      summary: Delete a client role
       security:
         - jwt: [ ]
       tags:
@@ -158,6 +166,7 @@ paths:
           description: Bad request
   /user/info:
     get:
+      summary: Get an object that represents the current user
       security:
         - jwt: [ ]
       tags:
@@ -169,6 +178,7 @@ paths:
         "401":
           description: Bad request
     post:
+      summary: Get an object that represents the requested user
       security:
         - jwt: [ ]
       tags:
@@ -190,6 +200,7 @@ paths:
           description: Bad request
   /token/info:
     get:
+      summary: Get a decrypted token
       security:
         - jwt: [ ]
       tags:
@@ -202,6 +213,7 @@ paths:
           description: Bad request
   /auth/token/refresh:
     post:
+      summary: Refresh a token
       tags:
         - Authentication
       operationId: app.refresh_token
@@ -214,20 +226,51 @@ paths:
           description: Bad request
   /auth/logout:
     post:
+      summary: Disable refresh token
       security:
         - jwt: [ ]
       tags:
         - Authentication
-      operationId: app.logout
       requestBody:
-        $ref: "#/components/requestBodies/app.refresh_tokenRefreshTokenBody"
+        content:
+          application/json:
+            schema:
+              required:
+                - refreshToken
+              properties:
+                refreshToken:
+                  type: string
+      operationId: app.logout
       responses:
         "200":
           description: Logout
         "401":
           description: Bad request
+  /user/delete:
+    post:
+      summary: Delete a user
+      security:
+        - jwt: [ ]
+      tags:
+        - Authentication
+      requestBody:
+        content:
+          application/json:
+            schema:
+              required:
+                - id
+              properties:
+                id:
+                  type: string
+      operationId: app.delete_user
+      responses:
+        "200":
+          description: Deleted user sucessfully.
+        "401":
+          description: Bad request.
   /user/update:
     put:
+      summary: Update a user
       security:
         - jwt: [ ]
       tags:
@@ -285,7 +328,7 @@ components:
             required:
               - refreshToken
             properties:
-              role:
+              refreshToken:
                 type: string
       description: Refresh Token
   securitySchemes:
