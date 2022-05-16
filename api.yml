@@ -27,10 +27,13 @@ paths:
                   type: string
                 password:
                   type: string
+              example:
+                username: soa-admin
+                password: 27654231c1605128c22ed5776a39f7a2a13d8a127e8d96725eb72b568f340113
         description: authentication with username and password and get jwt token
       responses:
         "200":
-          description: Return jwt token
+          description: Returns jwt token
         "401":
           description: Bad auth
   /auth/logout:
